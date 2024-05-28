@@ -1,0 +1,258 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+// Interfaces
+interface IUsuario
+{
+    string Nombre { get; set; }
+    string Email { get; set; }
+    string Contraseña { get; set; }
+    bool IniciarSesion(string email, string contraseña);
+}
+
+interface IDirector : IUsuario
+{
+    List<Profesor> VerListadoProfesores();
+    List<Estudiante> VerListadoEstudiantesPorGrado(int grado);
+    void AgregarProfesor(Profesor profesor);
+    void AgregarEstudiante(Estudiante estudiante);
+}
+
+interface IProfesor : IUsuario
+{
+    List<Estudiante> VerListadoEstudiantesPorGrado(int grado);
+    void AgregarContenidoClase(int grado, string materia, string contenido);
+    void AgregarEstudiante(Estudiante estudiante);
+}
+
+interface IEstudiante : IUsuario
+{
+    List<Profesor> VerListadoProfesores();
+    string VerContenidoClase(string materia);
+    void AgregarProfesor(Profesor profesor);
+}
+
+// Clases
+class Escuela
+{
+    private List<Profesor> profesores = new List<Profesor>();
+    private List<Estudiante> estudiantes = new List<Estudiante>();
+    private Director director;
+
+    public Escuela(Director director)
+    {
+        this.director = director;
+    }
+
+    public void AgregarProfesor(Profesor profesor)
+    {
+        profesores.Add(profesor);
+    }
+
+    public void AgregarEstudiante(Estudiante estudiante)
+    {
+        estudiantes.Add(estudiante);
+    }
+
+    public IUsuario IniciarSesion(string email, string contraseña)
+    {
+        if (director.IniciarSesion(email, contraseña))
+            return director;
+
+        foreach (Profesor profesor in profesores)
+        {
+            if (profesor.IniciarSesion(email, contraseña))
+                return profesor;
+        }
+
+        foreach (Estudiante estudiante in estudiantes)
+        {
+            if (estudiante.IniciarSesion(email, contraseña))
+                return estudiante;
+        }
+
+        return null;
+    }
+}
+
+class Director : IDirector
+{
+    public string Nombre { get; set; }
+    public string Email { get; set; }
+    public string Contraseña { get; set; }
+
+    private List<Profesor> ListaProfesores = new List<Profesor>();
+    private List<Estudiante> ListaEstudiantes = new List<Estudiante>();
+
+    public bool IniciarSesion(string email, string contraseña)
+    {
+        return Email == email && Contraseña == contraseña;
+    }
+
+    public List<Profesor> VerListadoProfesores()
+    {
+        return ListaProfesores;
+    }
+
+    public List<Estudiante> VerListadoEstudiantesPorGrado(int grado)
+    {
+        return ListaEstudiantes.Where(e => e.Grado == grado).ToList();
+    }
+
+    public void AgregarProfesor(Profesor profesor)
+    {
+        ListaProfesores.Add(profesor);
+    }
+
+    public void AgregarEstudiante(Estudiante estudiante)
+    {
+        ListaEstudiantes.Add(estudiante);
+    }
+}
+
+class Profesor : IProfesor
+{
+    public string Nombre { get; set; }
+    public string Email { get; set; }
+    public string Contraseña { get; set; }
+
+    public Dictionary<int, Dictionary<string, List<string>>> contenidosClase = new Dictionary<int, Dictionary<string, List<string>>>();
+    private List<Estudiante> ListaEstudiantes = new List<Estudiante>();
+
+    public bool IniciarSesion(string email, string contraseña)
+    {
+        return Email == email && Contraseña == contraseña;
+    }
+
+    public List<Estudiante> VerListadoEstudiantesPorGrado(int grado)
+    {
+        return ListaEstudiantes.Where(e => e.Grado == grado).ToList();
+    }
+
+    public void AgregarContenidoClase(int grado, string materia, string contenido)
+    {
+        if (!contenidosClase.ContainsKey(grado))
+            contenidosClase[grado] = new Dictionary<string, List<string>>();
+
+        if (!contenidosClase[grado].ContainsKey(materia))
+            contenidosClase[grado][materia] = new List<string>();
+
+        contenidosClase[grado][materia].Add(contenido);
+    }
+
+    public void AgregarEstudiante(Estudiante estudiante)
+    {
+        ListaEstudiantes.Add(estudiante);
+    }
+}
+
+class Estudiante : IEstudiante
+{
+    public string Nombre { get; set; }
+    public string Email { get; set; }
+    public string Contraseña { get; set; }
+    public int Grado { get; set; }
+
+    private List<Profesor> ListaProfesores = new List<Profesor>();
+
+    public bool IniciarSesion(string email, string contraseña)
+    {
+        return Email == email && Contraseña == contraseña;
+    }
+
+    public List<Profesor> VerListadoProfesores()
+    {
+        return ListaProfesores;
+    }
+
+    public string VerContenidoClase(string materia)
+    {
+        foreach (Profesor profesor in ListaProfesores)
+        {
+            if (profesor.contenidosClase.ContainsKey(Grado) && profesor.contenidosClase[Grado].ContainsKey(materia))
+            {
+                return string.Join(Environment.NewLine, profesor.contenidosClase[Grado][materia]);
+            }
+        }
+
+        return string.Empty;
+    }
+
+    public void AgregarProfesor(Profesor profesor)
+    {
+        ListaProfesores.Add(profesor);
+    }
+}
+
+// Programa principal
+class Program
+{
+    static void Main(string[] args)
+    {
+        Director director = new Director { Nombre = "Director", Email = "director@escuela.com", Contraseña = "123456" };
+        Escuela escuela = new Escuela(director);
+
+        Profesor profesor = new Profesor { Nombre = "Profesor", Email = "profesor@escuela.com", Contraseña = "123456" };
+        escuela.AgregarProfesor(profesor);
+
+        Estudiante estudiante = new Estudiante { Nombre = "Estudiante", Email = "estudiante@escuela.com", Contraseña = "123456", Grado = 5 };
+        escuela.AgregarEstudiante(estudiante);
+
+        profesor.AgregarEstudiante(estudiante);
+        estudiante.AgregarProfesor(profesor);
+
+        profesor.AgregarContenidoClase(5, "Matemáticas", "Suma y resta");
+
+        Console.WriteLine("Ingrese su correo electrónico:");
+        string email = Console.ReadLine();
+        Console.WriteLine("Ingrese su contraseña:");
+        string contraseña = Console.ReadLine();
+
+        IUsuario usuario = escuela.IniciarSesion(email, contraseña);
+        if (usuario != null)
+        {
+            if (usuario is Director)
+            {
+                Director directorUsuario = (Director)usuario;
+                Console.WriteLine("Director: " + directorUsuario.Nombre);
+                Console.WriteLine("Profesores:");
+                foreach (Profesor p in directorUsuario.VerListadoProfesores())
+                {
+                    Console.WriteLine("- " + p.Nombre);
+                }
+                Console.WriteLine("Estudiantes por grado 5:");
+                foreach (Estudiante e in directorUsuario.VerListadoEstudiantesPorGrado(5))
+                {
+                    Console.WriteLine("- " + e.Nombre);
+                }
+            }
+            else if (usuario is Profesor)
+            {
+                Profesor profesorUsuario = (Profesor)usuario;
+                Console.WriteLine("Profesor: " + profesorUsuario.Nombre);
+                Console.WriteLine("Estudiantes por grado 5:");
+                foreach (Estudiante e in profesorUsuario.VerListadoEstudiantesPorGrado(5))
+                {
+                    Console.WriteLine("- " + e.Nombre);
+                }
+            }
+            else if (usuario is Estudiante)
+            {
+                Estudiante estudianteUsuario = (Estudiante)usuario;
+                Console.WriteLine("Estudiante: " + estudianteUsuario.Nombre);
+                Console.WriteLine("Profesores:");
+                foreach (Profesor p in estudianteUsuario.VerListadoProfesores())
+                {
+                    Console.WriteLine("- " + p.Nombre);
+                }
+                Console.WriteLine("Contenido de la clase de Matemáticas:");
+                Console.WriteLine(estudianteUsuario.VerContenidoClase("Matemáticas"));
+            }
+        }
+        else
+        {
+            Console.WriteLine("Correo electrónico o contraseña incorrectos.");
+        }
+    }
+}
